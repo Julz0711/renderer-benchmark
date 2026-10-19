@@ -1,0 +1,61 @@
+{
+	"renderer-benchmark.title": "Renderer Benchmark",
+	"renderer-benchmark.leaving": "Starting the benchmark",
+	"renderer-benchmark.videoSettingsButton": "Compare APIs...",
+
+	"renderer-benchmark.screen.intro": "Finds out whether Vulkan or OpenGL runs Minecraft better on your PC. The camera flies the same route over a fresh world on each, with the same settings, while every frame is timed. The game has to restart once in between, and your settings are put back afterwards.",
+	"renderer-benchmark.screen.current": "Running on %s, %s",
+	"renderer-benchmark.screen.runs": "Runs per API: %s",
+	"renderer-benchmark.screen.compare": "Compare Vulkan and OpenGL",
+	"renderer-benchmark.screen.lastResult": "Last Result",
+	"renderer-benchmark.screen.noVulkan": "Vulkan can't run on this PC, so there is nothing to compare: %s",
+	"renderer-benchmark.screen.pending": "%s is selected for the second half. Restart the game to finish the comparison.",
+	"renderer-benchmark.screen.cancelPending": "Cancel the Comparison",
+	"renderer-benchmark.screen.confirm.title": "Compare Vulkan and OpenGL?",
+	"renderer-benchmark.screen.confirm.message": "First the camera flies over a temporary world on %s. Then the game asks you to restart on %s and flies again. It takes about %s minutes; keep the window open and don't touch anything while it flies. If you are in a world, you will leave it.",
+	"renderer-benchmark.screen.confirm.start": "Start",
+
+	"renderer-benchmark.hud.warmup": "Renderer Benchmark: %s, warming up, %ss",
+	"renderer-benchmark.hud.run": "Renderer Benchmark: %s, run %s of %s, %ss",
+
+	"renderer-benchmark.restart.title": "Restart on %s",
+	"renderer-benchmark.restart.message": "%s is done. The Graphics API is now set to %s, which only takes effect after a restart. Start the game again and the comparison continues by itself.",
+	"renderer-benchmark.restart.quit": "Quit Game",
+	"renderer-benchmark.restart.later": "Later",
+
+	"renderer-benchmark.continue.title": "Continue on %s?",
+	"renderer-benchmark.continue.message": "The game now runs on %s. The camera flies the same route again, then you get the results.",
+	"renderer-benchmark.continue.start": "Continue",
+	"renderer-benchmark.continue.cancel": "Cancel",
+
+	"renderer-benchmark.unavailable.title": "%s didn't start",
+	"renderer-benchmark.unavailable.message": "The game was supposed to start on %s but started on %s. Either it fell back because it failed, or a launcher option forces the graphics API. The comparison was cancelled and your setting put back.",
+
+	"renderer-benchmark.stopped.title": "Comparison stopped",
+	"renderer-benchmark.stopped.loadFailed": "The temporary world didn't load. Your settings were put back.",
+	"renderer-benchmark.stopped.cancelled": "You left the world, so the comparison stopped. Your settings were put back.",
+	"renderer-benchmark.stopped.interrupted": "The game closed while the camera was flying, so the comparison stopped. Your settings were put back.",
+
+	"renderer-benchmark.nextStart.title": "Takes effect after a restart",
+	"renderer-benchmark.nextStart.message": "The game starts on %s next time.",
+
+	"renderer-benchmark.verdict.tie": "Both APIs run about the same on your PC",
+	"renderer-benchmark.verdict.faster.fewer": "%s is %s%% faster, with fewer stutters",
+	"renderer-benchmark.verdict.faster.same": "%s is %s%% faster, with about the same stutter",
+	"renderer-benchmark.verdict.faster.more": "%s is %s%% faster, but stutters more",
+
+	"renderer-benchmark.results.title": "Renderer Benchmark Results",
+	"renderer-benchmark.results.average": "Average FPS",
+	"renderer-benchmark.results.onePercentLow": "1% low FPS",
+	"renderer-benchmark.results.pointOnePercentLow": "0.1% low FPS",
+	"renderer-benchmark.results.spikes": "Spikes >50 ms",
+	"renderer-benchmark.results.gpu": "GPU: %s",
+	"renderer-benchmark.results.settings": "Settings: %s",
+	"renderer-benchmark.results.finishedAt": "Measured %s",
+	"renderer-benchmark.results.windowChanged": "The window size changed (%s, then %s), so the numbers may not be comparable.",
+	"renderer-benchmark.results.use": "Use %s",
+	"renderer-benchmark.results.keep": "Keep My Setting (%s)",
+	"renderer-benchmark.results.copy": "Copy as Text",
+	"renderer-benchmark.results.saveImage": "Save Image",
+	"renderer-benchmark.results.copied": "Copied to the clipboard"
+}
