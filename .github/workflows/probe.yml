@@ -13,12 +13,21 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew printClasspath genSources --stacktrace
-      - run: python3 probe.py > probe-out.txt 2>&1; wc -l probe-out.txt
-      - run: cat probe-out.txt
+      - run: ./gradlew printClasspath genSources
+      - run: python3 probe2.py > probe-out.txt 2>&1; wc -l probe-out.txt
       - uses: actions/upload-artifact@v4
         with:
           name: probe
-          path: |
-            probe-out.txt
-            sources/
+          path: probe-out.txt
+
+  show:
+    needs: probe
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: probe
+      - run: sed -n "$(( ${{ matrix.part }} * 4500 + 1 )),$(( (${{ matrix.part }} + 1) * 4500 ))p" probe-out.txt
