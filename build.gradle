@@ -59,14 +59,14 @@ dependencies {
 
 	// Optional integration. Only compiled against; not required at runtime.
 	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
-	// Mod Menu in the dev client, so its Compare button can be tested with runClient
+	// Mod Menu in the dev client, so its Benchmark button can be tested with runClient
 	localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 	// Sodium in the dev client, to check how it behaves with Vulkan: ./gradlew runClient -PwithSodium
 	if (project.hasProperty("withSodium")) {
 		localRuntime "maven.modrinth:sodium:${project.sodium_version}"
 	}
 
-	// Plain unit tests for the metrics, verdict and route (src/test), which have no Minecraft dependencies.
+	// Plain unit tests for the metrics, verdict, scenes and route (src/test), which have no Minecraft dependencies.
 	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
 	testImplementation "org.junit.jupiter:junit-jupiter"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"

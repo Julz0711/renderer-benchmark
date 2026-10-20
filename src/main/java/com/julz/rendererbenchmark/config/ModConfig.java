@@ -13,17 +13,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class ModConfig {
-    public static final int MIN_RUNS = 1;
-    public static final int MAX_RUNS = 5;
-
     private static final Path CONFIG_FILE = FabricLoader.getInstance().getConfigDir().resolve("renderer-benchmark.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static ModConfig instance;
 
-    // Each renderer runs this many times and the median counts, which cuts the noise of a single run.
-    public int runsPerRenderer = 3;
-    // Untimed flight before the first run, so chunk loading and shader compiles do not count.
-    public int warmupSeconds = 15;
+    // Untimed flight after moving to a new place, so chunk loading and shader compiles do not count.
+    public int warmupSeconds = 10;
+    // Timed flight per scene.
+    public int sceneSeconds = 20;
 
     public static ModConfig getInstance() {
         if (instance == null) {
@@ -58,7 +55,7 @@ public class ModConfig {
 
     /** Pulls hand-edited values back into range. */
     public void sanitize() {
-        runsPerRenderer = Math.clamp(runsPerRenderer, MIN_RUNS, MAX_RUNS);
-        warmupSeconds = Math.clamp(warmupSeconds, 5, 60);
+        warmupSeconds = Math.clamp(warmupSeconds, 3, 60);
+        sceneSeconds = Math.clamp(sceneSeconds, 10, 120);
     }
 }

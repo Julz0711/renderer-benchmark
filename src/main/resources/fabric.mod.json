@@ -3,7 +3,7 @@
 	"id": "renderer-benchmark",
 	"version": "${version}",
 	"name": "Renderer Benchmark",
-	"description": "Finds out whether Vulkan or OpenGL runs Minecraft better on your PC, with one click.",
+	"description": "Finds out whether Vulkan or OpenGL runs Minecraft better on your PC, across plains, forests, mobs, rain, night, ocean and snow.",
 	"authors": [
 		"Julz"
 	],

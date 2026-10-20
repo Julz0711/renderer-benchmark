@@ -45,15 +45,4 @@ class VerdictTest {
                 "OpenGL", new RunMetrics(100, 61, 40, 5, 6000, 60));
         assertEquals(Verdict.Stutter.FEWER, verdict.stutter());
     }
-
-    @Test
-    void shareTextHasATable() {
-        RunMetrics vulkan = new RunMetrics(118, 80, 50, 0, 7080, 60);
-        RunMetrics openGl = new RunMetrics(100, 60, 40, 4, 6000, 60);
-        String text = ShareText.format("Vulkan", vulkan, "OpenGL", openGl,
-                Verdict.compare("Vulkan", vulkan, "OpenGL", openGl), "Test GPU", "12 chunks");
-        assertTrue(text.contains("Average FPS          118       100"), text);
-        assertTrue(text.contains("Spikes >50ms           0         4"), text);
-        assertTrue(text.contains("GPU: Test GPU"), text);
-    }
 }

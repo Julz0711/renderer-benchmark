@@ -3,98 +3,103 @@ package com.julz.rendererbenchmark.test;
 import com.julz.rendererbenchmark.client.BenchmarkController;
 import com.julz.rendererbenchmark.client.BenchmarkScreen;
 import com.julz.rendererbenchmark.client.Renderers;
-import com.julz.rendererbenchmark.client.ResultsScreen;
-import com.julz.rendererbenchmark.config.ComparisonState;
-import com.julz.rendererbenchmark.config.ModConfig;
+import com.julz.rendererbenchmark.config.ResultStore;
+import com.julz.rendererbenchmark.core.BenchmarkResult;
+import com.julz.rendererbenchmark.core.RunMetrics;
+import com.julz.rendererbenchmark.core.Scenario;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 
 /**
- * Runs a whole comparison with short runs. The game can't restart inside a test, so the second
- * half runs on the same renderer, under the other renderer's name; that is enough to check the
- * flow, the stored results and that the player's settings come back.
+ * Runs a whole benchmark with short scenes on the renderer the test runs on, then fakes a result
+ * for the other renderer (a test can't restart the game) to check the comparison.
  */
 public class RendererBenchmarkClientGameTest implements FabricClientGameTest {
-    private static final int LOAD_TIMEOUT_TICKS = 20 * 120;
-    private static final int RUN_TIMEOUT_TICKS = 20 * 60;
+    private static final int LOAD_TIMEOUT_TICKS = 20 * 240;
+    private static final int SCENE_TIMEOUT_TICKS = 20 * 60;
 
     @Override
     public void runTest(ClientGameTestContext context) {
+        context.runOnClient(client -> ResultStore.clear());
         context.setScreen(() -> new BenchmarkScreen(null));
         context.waitForScreen(BenchmarkScreen.class);
-        context.takeScreenshot("renderer-benchmark-screen");
+        context.takeScreenshot("renderer-benchmark-empty");
 
         context.runOnClient(client -> {
-            BenchmarkController.setTimingForTesting(4, 1, false);
-            ModConfig.getInstance().runsPerRenderer = 2;
-            client.options.renderDistance().set(8);
-            client.options.fov().set(90);
+            BenchmarkController.setTimingForTesting(3, 1, false);
             client.options.framerateLimit().set(120);
+            client.options.enableVsync().set(true);
         });
-        String originalPreference = context.computeOnClient(client -> Renderers.preference(client).getSerializedName());
 
-        // First half: flies the route and asks for a restart
         context.setScreen(TitleScreen::new);
         context.runOnClient(BenchmarkController::start);
-        context.waitFor(client -> BenchmarkController.step() == BenchmarkController.Step.RUNNING, LOAD_TIMEOUT_TICKS);
+        context.waitFor(client -> BenchmarkController.step() == BenchmarkController.Step.WARMUP, LOAD_TIMEOUT_TICKS);
         context.runOnClient(client -> {
-            assertEquals(8, client.options.renderDistance().get(), "render distance while flying");
-            assertEquals(70, client.options.fov().get(), "FOV while flying");
             assertEquals(260, client.options.framerateLimit().get(), "frame limit while flying");
+            assertEquals(false, client.options.enableVsync().get(), "VSync while flying");
         });
-        context.waitTicks(20);
-        context.takeScreenshot("renderer-benchmark-flying");
-        context.waitFor(client -> client.gui.screen() instanceof ConfirmScreen && client.level == null, RUN_TIMEOUT_TICKS);
-        context.takeScreenshot("renderer-benchmark-restart-prompt");
-
-        ComparisonState afterFirst = context.computeOnClient(client -> ComparisonState.load());
-        assertEquals(ComparisonState.Phase.RESTART, afterFirst.phase, "phase after the first half");
-        assertEquals(2, afterFirst.firstRuns.size(), "runs in the first half");
-        assertTrue(afterFirst.firstRuns.get(0).frameCount() > 0, "frames recorded in the first run");
-        context.runOnClient(client -> {
-            assertEquals(afterFirst.secondPreference, Renderers.preference(client).getSerializedName(), "preference for the second half");
-            assertEquals(90, client.options.fov().get(), "FOV restored after the first half");
-            assertEquals(120, client.options.framerateLimit().get(), "frame limit restored after the first half");
-        });
-
-        // "Later" goes back to the title screen; the second half then starts as after a restart
-        context.runOnClient(client -> {
-            client.gui.setScreen(new TitleScreen());
-            BenchmarkController.resume(client, ComparisonState.load());
-        });
-        context.waitFor(client -> client.gui.screen() instanceof ResultsScreen && client.level == null,
-                LOAD_TIMEOUT_TICKS + RUN_TIMEOUT_TICKS);
+        for (Scenario scenario : Scenario.values()) {
+            context.waitFor(client -> BenchmarkController.currentScenario() == scenario
+                    && BenchmarkController.step() == BenchmarkController.Step.RUNNING, SCENE_TIMEOUT_TICKS);
+            context.waitTicks(20);
+            context.takeScreenshot("renderer-benchmark-scene-" + scenario.id());
+        }
+        context.waitFor(client -> client.gui.screen() instanceof BenchmarkScreen && client.level == null
+                && !BenchmarkController.isRunning(), SCENE_TIMEOUT_TICKS);
         context.waitTicks(5);
-        context.takeScreenshot("renderer-benchmark-results");
+        context.takeScreenshot("renderer-benchmark-one-renderer");
 
-        ComparisonState done = context.computeOnClient(client -> ComparisonState.load());
-        assertEquals(ComparisonState.Phase.DONE, done.phase, "phase after the second half");
-        assertEquals(2, done.secondRuns.size(), "runs in the second half");
-        assertTrue(done.hasBothResults(), "both halves have results");
-
-        // Closing the results without a choice keeps the player's own setting
-        context.runOnClient(client -> client.gui.screen().onClose());
-        context.waitTick();
+        String renderer = context.computeOnClient(client -> Renderers.current());
+        BenchmarkResult measured = context.computeOnClient(client -> ResultStore.get(renderer));
+        assertTrue(measured != null, "result saved for " + renderer);
+        assertEquals(Scenario.values().length, measured.scenes.size(), "scenes measured");
+        for (BenchmarkResult.SceneResult scene : measured.scenes) {
+            assertTrue(scene.metrics().frameCount() > 0, "frames recorded in " + scene.scenario());
+        }
+        assertTrue(measured.overall.frameCount() > 0, "frames recorded overall");
         context.runOnClient(client -> {
-            assertEquals(originalPreference, Renderers.preference(client).getSerializedName(), "preference after closing the results");
-            assertTrue(ComparisonState.load() == null, "comparison cleared");
-            assertTrue(ComparisonState.loadLast() != null, "last result kept");
-            assertEquals(8, client.options.renderDistance().get(), "render distance restored");
-            assertEquals(90, client.options.fov().get(), "FOV restored");
+            assertEquals(120, client.options.framerateLimit().get(), "frame limit restored");
+            assertEquals(true, client.options.enableVsync().get(), "VSync restored");
+            assertTrue(ResultStore.loadRestore() == null, "nothing left to restore");
         });
 
-        // The last result opens from the main screen
-        context.setScreen(() -> new ResultsScreen(null, ComparisonState.loadLast(), false));
-        context.waitForScreen(ResultsScreen.class);
-        context.takeScreenshot("renderer-benchmark-last-result");
+        // The other renderer, as if measured after a restart: a bit faster everywhere
+        context.runOnClient(client -> {
+            BenchmarkResult other = new BenchmarkResult();
+            other.renderer = Renderers.other(renderer);
+            other.gpu = measured.gpu;
+            other.settings = measured.settings;
+            other.finishedAt = measured.finishedAt;
+            for (BenchmarkResult.SceneResult scene : measured.scenes) {
+                other.scenes.add(new BenchmarkResult.SceneResult(scene.scenario(), faster(scene.metrics())));
+            }
+            other.overall = faster(measured.overall);
+            ResultStore.put(other);
+        });
+        context.setScreen(() -> new BenchmarkScreen(new TitleScreen()));
+        context.waitForScreen(BenchmarkScreen.class);
+        context.takeScreenshot("renderer-benchmark-comparison");
+        context.clickScreenButton("renderer-benchmark.screen.copy");
+        context.runOnClient(client -> {
+            String copied = client.keyboardHandler.getClipboard();
+            assertTrue(copied.contains("Overall") && copied.contains("Lots of mobs"), "copied text: " + copied);
+        });
+
+        context.runOnClient(client -> {
+            ResultStore.clear();
+            BenchmarkController.setTimingForTesting(-1, -1, true);
+        });
         context.setScreen(TitleScreen::new);
-        context.runOnClient(client -> BenchmarkController.setTimingForTesting(-1, -1, true));
         // Let the title screen delete the temporary world
         context.waitTicks(5);
         context.runOnClient(client -> assertTrue(!client.getLevelSource().levelExists(BenchmarkController.WORLD_ID),
                 "temporary world deleted"));
+    }
+
+    private static RunMetrics faster(RunMetrics metrics) {
+        return new RunMetrics(metrics.averageFps() * 1.2, metrics.onePercentLowFps() * 1.1,
+                metrics.pointOnePercentLowFps() * 1.1, metrics.spikes(), metrics.frameCount(), metrics.seconds());
     }
 
     private static void assertTrue(boolean condition, String what) {

@@ -36,11 +36,6 @@ public final class Renderers {
         return VULKAN.equals(renderer) ? PreferredGraphicsApi.VULKAN : PreferredGraphicsApi.OPENGL;
     }
 
-    /** The renderer an option value starts on. "Default" tries OpenGL first in 26.3. */
-    public static String startsOn(PreferredGraphicsApi api) {
-        return api == PreferredGraphicsApi.VULKAN ? VULKAN : OPENGL;
-    }
-
     public static PreferredGraphicsApi preference(Minecraft client) {
         return client.options.preferredGraphicsBackend().get();
     }

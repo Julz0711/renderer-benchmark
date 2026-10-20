@@ -1,5 +1,6 @@
 package com.julz.rendererbenchmark.client;
 
+import com.julz.rendererbenchmark.core.Scenario;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -41,12 +42,12 @@ public class RendererBenchmarkClient implements ClientModInitializer {
     }
 
     private static Component hudText() {
-        String renderer = BenchmarkController.currentRenderer();
+        Scenario scenario = BenchmarkController.currentScenario();
+        Component scene = Component.translatable("renderer-benchmark.scenario." + scenario.id());
         long seconds = Math.round(Math.ceil(BenchmarkController.secondsLeft()));
-        if (BenchmarkController.step() == BenchmarkController.Step.WARMUP) {
-            return Component.translatable("renderer-benchmark.hud.warmup", renderer, seconds);
-        }
-        return Component.translatable("renderer-benchmark.hud.run", renderer, BenchmarkController.runNumber(),
-                BenchmarkController.state().runsPerRenderer, seconds);
+        String key = BenchmarkController.step() == BenchmarkController.Step.WARMUP
+                ? "renderer-benchmark.hud.warmup" : "renderer-benchmark.hud.run";
+        return Component.translatable(key, Renderers.current(), scene, BenchmarkController.sceneNumber(),
+                Scenario.values().length, seconds);
     }
 }
