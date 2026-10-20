@@ -9,6 +9,7 @@ import com.julz.rendererbenchmark.core.RunMetrics;
 import com.julz.rendererbenchmark.core.Scenario;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.gui.screens.TitleScreen;
 
 /**
@@ -32,23 +33,29 @@ public class RendererBenchmarkClientGameTest implements FabricClientGameTest {
             client.options.enableVsync().set(true);
         });
 
-        context.setScreen(TitleScreen::new);
-        context.runOnClient(BenchmarkController::start);
-        context.waitFor(client -> BenchmarkController.step() == BenchmarkController.Step.WARMUP, LOAD_TIMEOUT_TICKS);
-        context.runOnClient(client -> {
-            assertEquals(260, client.options.framerateLimit().get(), "frame limit while flying");
-            assertEquals(false, client.options.enableVsync().get(), "VSync while flying");
-        });
-        for (Scenario scenario : Scenario.values()) {
-            context.waitFor(client -> BenchmarkController.currentScenario() == scenario
-                    && BenchmarkController.step() == BenchmarkController.Step.RUNNING, SCENE_TIMEOUT_TICKS);
-            context.waitTicks(20);
-            context.takeScreenshot("renderer-benchmark-scene-" + scenario.id());
+        // The real benchmark creates its own world; here it flies in the test's world, since leaving a
+        // world from inside a client tick deadlocks with the game test's lock-step threading.
+        try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
+            context.waitFor(client -> client.player != null);
+            context.setScreen(() -> null);
+            context.runOnClient(BenchmarkController::startInCurrentWorldForTesting);
+            context.waitFor(client -> BenchmarkController.step() == BenchmarkController.Step.WARMUP, LOAD_TIMEOUT_TICKS);
+            context.runOnClient(client -> {
+                assertEquals(260, client.options.framerateLimit().get(), "frame limit while flying");
+                assertEquals(false, client.options.enableVsync().get(), "VSync while flying");
+            });
+            for (Scenario scenario : Scenario.values()) {
+                context.waitFor(client -> BenchmarkController.currentScenario() == scenario
+                        && BenchmarkController.step() == BenchmarkController.Step.RUNNING, SCENE_TIMEOUT_TICKS);
+                context.waitTicks(20);
+                context.takeScreenshot("renderer-benchmark-scene-" + scenario.id());
+            }
+            context.waitFor(client -> client.gui.screen() instanceof BenchmarkScreen && !BenchmarkController.isRunning(),
+                    SCENE_TIMEOUT_TICKS);
+            context.waitTicks(5);
+            context.takeScreenshot("renderer-benchmark-one-renderer");
+            context.setScreen(() -> null);
         }
-        context.waitFor(client -> client.gui.screen() instanceof BenchmarkScreen && client.level == null
-                && !BenchmarkController.isRunning(), SCENE_TIMEOUT_TICKS);
-        context.waitTicks(5);
-        context.takeScreenshot("renderer-benchmark-one-renderer");
 
         String renderer = context.computeOnClient(client -> Renderers.current());
         BenchmarkResult measured = context.computeOnClient(client -> ResultStore.get(renderer));
@@ -91,10 +98,6 @@ public class RendererBenchmarkClientGameTest implements FabricClientGameTest {
             BenchmarkController.setTimingForTesting(-1, -1, true);
         });
         context.setScreen(TitleScreen::new);
-        // Let the title screen delete the temporary world
-        context.waitTicks(5);
-        context.runOnClient(client -> assertTrue(!client.getLevelSource().levelExists(BenchmarkController.WORLD_ID),
-                "temporary world deleted"));
     }
 
     private static RunMetrics faster(RunMetrics metrics) {

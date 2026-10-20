@@ -90,6 +90,7 @@ public final class BenchmarkController {
     private static boolean disturbed;
     private static boolean checkedRestoreThisLaunch;
     private static boolean worldToDelete;
+    private static boolean inTestWorld;
 
     // Replaced by the game tests to keep a benchmark short.
     private static double sceneSecondsOverride = -1;
@@ -122,6 +123,29 @@ public final class BenchmarkController {
 
     /** Starts a benchmark on the renderer the game is running now. Leaves the current world, if any. */
     public static void start(Minecraft client) {
+        prepare(client);
+        if (client.level != null) {
+            client.disconnectFromWorld(Component.translatable("renderer-benchmark.leaving"));
+        }
+        deleteWorld(client);
+        LevelSettings settings = new LevelSettings(WORLD_NAME, GameType.SPECTATOR,
+                new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true,
+                WorldDataConfiguration.DEFAULT);
+        client.createWorldOpenFlows().createFreshLevel(WORLD_ID, settings, new WorldOptions(SEED, true, false),
+                WorldPresets::createNormalWorldDimensions, new TitleScreen());
+    }
+
+    /**
+     * Flies the benchmark in the world the game test opened, and stays in it afterwards. Leaving a
+     * world from inside a client tick deadlocks with the game test's lock-step threading, so the
+     * test leaves the world itself.
+     */
+    public static void startInCurrentWorldForTesting(Minecraft client) {
+        prepare(client);
+        inTestWorld = true;
+    }
+
+    private static void prepare(Minecraft client) {
         result = new BenchmarkResult();
         result.renderer = Renderers.current();
         result.gpu = Renderers.gpu();
@@ -129,22 +153,13 @@ public final class BenchmarkController {
         places = null;
         savedSettings = snapshot(client.options);
         ResultStore.saveRestore(savedSettings);
-
-        if (client.level != null) {
-            client.disconnectFromWorld(Component.translatable("renderer-benchmark.leaving"));
-        }
-        deleteWorld(client);
         applyBenchmarkSettings(client.options);
+        inTestWorld = false;
         step = Step.LOADING;
         stepStartNanos = System.nanoTime();
         sceneIndex = 0;
         disturbed = false;
         RECORDER.reset();
-        LevelSettings settings = new LevelSettings(WORLD_NAME, GameType.SPECTATOR,
-                new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true,
-                WorldDataConfiguration.DEFAULT);
-        client.createWorldOpenFlows().createFreshLevel(WORLD_ID, settings, new WorldOptions(SEED, true, false),
-                WorldPresets::createNormalWorldDimensions, new TitleScreen());
     }
 
     /** Called at the start of every rendered frame: moves the camera along the route and times the frame. */
@@ -389,9 +404,11 @@ public final class BenchmarkController {
 
         step = Step.IDLE;
         restoreSettings(client.options, savedSettings);
-        client.disconnectWithSavingScreen();
-        worldToDelete = true;
         result = null;
+        if (!inTestWorld) {
+            client.disconnectWithSavingScreen();
+            worldToDelete = true;
+        }
         client.gui.setScreen(new BenchmarkScreen(new TitleScreen()));
     }
 
@@ -401,10 +418,10 @@ public final class BenchmarkController {
         restoreSettings(client.options, savedSettings);
         result = null;
         allFrames.clear();
-        if (client.level != null) {
+        if (client.level != null && !inTestWorld) {
             client.disconnectWithSavingScreen();
+            worldToDelete = true;
         }
-        worldToDelete = true;
         client.gui.setScreen(new NoticeScreen(new BenchmarkScreen(new TitleScreen()),
                 Component.translatable("renderer-benchmark.stopped.title"),
                 Component.translatable("renderer-benchmark.stopped." + reason)));
