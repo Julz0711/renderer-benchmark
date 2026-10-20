@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "renderer-benchmark",
+	"version": "${version}",
+	"name": "Renderer Benchmark",
+	"description": "Finds out whether Vulkan or OpenGL runs Minecraft better on your PC, across plains, forests, mobs, rain, night, ocean and snow.",
+	"authors": [
+		"Julz"
+	],
+	"contact": {
+		"sources": "https://github.com/Julz0711/renderer-benchmark",
+		"issues": "https://github.com/Julz0711/renderer-benchmark/issues"
+	},
+	"license": "CC0-1.0",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.julz.rendererbenchmark.client.RendererBenchmarkClient"
+		],
+		"modmenu": [
+			"com.julz.rendererbenchmark.compat.ModMenuIntegration"
+		]
+	},
+	"mixins": [
+		"renderer-benchmark.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}
